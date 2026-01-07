@@ -1,100 +1,86 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Unlock, Lock, MapPin, Clock } from "lucide-react"
+import { Lock, Unlock } from "lucide-react"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function ActiveRentalPage() {
-  const [isUnlocked, setIsUnlocked] = useState(false)
-
-  // Mock data
-  const rental = {
-    plate: "JEEP-01",
-    model: "Jeep Wrangler",
-    startTime: new Date().toISOString(),
-    endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  }
+  const [isLocked, setIsLocked] = useState(true)
+  const router = useRouter()
 
   const handleUnlock = () => {
-    setIsUnlocked(true)
-    // In production: Call SmartCar API to unlock vehicle
+    alert("Conectando satélite... Auto Abierto 🔓")
+    setIsLocked(false)
   }
 
   const handleLock = () => {
-    setIsUnlocked(false)
-    // In production: Call SmartCar API to lock vehicle
+    alert("Auto Cerrado 🔒")
+    setIsLocked(true)
+  }
+
+  const handleEndTrip = () => {
+    // TODO: Implement end trip functionality
+    router.push("/")
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center space-y-2 pt-8">
-          <h1 className="text-3xl font-bold">Active Rental</h1>
-          <p className="text-muted-foreground">Manage your rental</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 flex flex-col">
+      <div className="max-w-2xl mx-auto w-full space-y-8 flex-1 flex flex-col justify-center">
+        {/* Header verde */}
+        <div className="bg-green-500 text-white rounded-lg p-6 text-center shadow-lg">
+          <h1 className="text-2xl md:text-3xl font-bold">
+            ¡Pago Exitoso! Tu Jeep está listo
+          </h1>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{rental.model}</CardTitle>
-            <CardDescription>Plate: {rental.plate}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Rental Period</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(rental.startTime).toLocaleDateString()} - {new Date(rental.endTime).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Status</p>
-                  <p className="text-sm font-semibold text-green-600">
-                    {isUnlocked ? "Unlocked" : "Locked"}
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Llave Digital - Centro */}
+        <div className="flex flex-col items-center space-y-8">
+          {/* Círculo grande con icono de candado */}
+          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center shadow-xl border-4 border-slate-400">
+            {isLocked ? (
+              <Lock className="w-16 h-16 md:w-20 md:h-20 text-slate-600" />
+            ) : (
+              <Unlock className="w-16 h-16 md:w-20 md:h-20 text-slate-600" />
+            )}
+          </div>
 
-            <div className="pt-4 border-t space-y-3">
-              {!isUnlocked ? (
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={handleUnlock}
-                >
-                  <Unlock className="mr-2 h-5 w-5" />
-                  Unlock Vehicle
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  variant="outline"
-                  onClick={handleLock}
-                >
-                  <Lock className="mr-2 h-5 w-5" />
-                  Lock Vehicle
-                </Button>
-              )}
-
-              <Button 
-                className="w-full" 
+          {/* Botones enormes */}
+          <div className="w-full space-y-4 max-w-md">
+            {isLocked ? (
+              <Button
+                onClick={handleUnlock}
+                className="w-full h-20 md:h-24 text-xl md:text-2xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
                 size="lg"
-                variant="destructive"
               >
-                End Rental & Return Vehicle
+                <Unlock className="mr-3 h-8 w-8 md:h-10 md:w-10" />
+                ABRIR (UNLOCK)
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            ) : (
+              <Button
+                onClick={handleLock}
+                className="w-full h-20 md:h-24 text-xl md:text-2xl font-bold bg-slate-700 hover:bg-slate-800 text-white shadow-lg"
+                size="lg"
+              >
+                <Lock className="mr-3 h-8 w-8 md:h-10 md:w-10" />
+                CERRAR (LOCK)
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Botón Finalizar Viaje */}
+        <div className="pt-8">
+          <Button
+            onClick={handleEndTrip}
+            className="w-full h-14 text-lg font-semibold bg-red-600 hover:bg-red-700 text-white shadow-lg"
+            variant="destructive"
+            size="lg"
+          >
+            Finalizar Viaje
+          </Button>
+        </div>
       </div>
     </div>
   )
 }
-

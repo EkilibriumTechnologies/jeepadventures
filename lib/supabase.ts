@@ -7,7 +7,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase environment variables are not set')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+
+// Keep backward compatibility
+export const supabase = supabaseClient
 
 // Server-side client for use in API routes
 export const createServerClient = () => {
