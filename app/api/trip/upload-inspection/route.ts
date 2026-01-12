@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const fileExt = file.name.split('.').pop()
-    const fileName = `${bookingId}/${side}-${Date.now()}.${fileExt}`
-    const filePath = `inspections/${fileName}`
+    // Path should NOT include bucket name since it's specified in .from('inspections')
+    const filePath = `${bookingId}/${side}-${Date.now()}.${fileExt}`
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer()

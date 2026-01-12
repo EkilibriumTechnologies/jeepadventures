@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now()
     const fileExt = file.name.split('.').pop() || 'jpg'
     const fileName = `exit-${side}-${timestamp}.${fileExt}`
-    const filePath = `inspections/${bookingId}/${fileName}`
+    // Path should NOT include bucket name since it's specified in .from('inspections')
+    const filePath = `${bookingId}/${fileName}`
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer()
