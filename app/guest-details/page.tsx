@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Mail, Phone, MapPin, CreditCard, ArrowRight } from "lucide-react"
+import { User, Mail, Phone, MapPin, CreditCard, ArrowRight, Camera, CheckCircle2, X, Loader2 } from "lucide-react"
 import { format, parse } from "date-fns"
-import { LicenseCapture } from "@/components/license-capture"
+import { useRef } from "react"
 
 interface GuestDetailsForm {
   fullName: string
@@ -40,6 +40,13 @@ export default function GuestDetailsPage() {
     licenseNumber: "",
     licenseImageUrl: undefined,
   })
+
+  // License photo upload state
+  const [licenseUploading, setLicenseUploading] = useState(false)
+  const [licenseUploadSuccess, setLicenseUploadSuccess] = useState(false)
+  const [licenseUploadError, setLicenseUploadError] = useState<string | null>(null)
+  const [licensePreview, setLicensePreview] = useState<string | null>(null)
+  const licenseInputRef = useRef<HTMLInputElement>(null)
 
   // Format dates for display
   const formatDate = (dateString: string): string => {
@@ -87,6 +94,10 @@ export default function GuestDetailsPage() {
 
     if (!formData.licenseNumber.trim()) {
       newErrors.licenseNumber = "El número de licencia es obligatorio"
+    }
+
+    if (!formData.licenseImageUrl) {
+      newErrors.licenseImageUrl = "La foto de licencia es obligatoria"
     }
 
     setErrors(newErrors)
@@ -155,11 +166,103 @@ export default function GuestDetailsPage() {
     }
   }
 
-  // Handle license image capture
-  const handleLicenseCapture = (imageUrl: string, imageFile: File) => {
-    setFormData((prev) => ({ ...prev, licenseImageUrl: imageUrl }))
-    console.log("License image captured:", imageUrl)
-    // File is already uploaded to Supabase, we just need the URL
+  // Handle license photo upload
+  const handleLicenseUpload = async (file: File) => {
+    if (!file) return
+
+    setLicenseUploading(true)
+    setLicenseUploadError(null)
+    setLicenseUploadSuccess(false)
+
+    try {
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setLicensePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop()
+      const timestamp = Date.now()
+      const filePath = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+      // Convert File to ArrayBuffer for upload
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = new Uint8Array(arrayBuffer)
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('licenses')
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (uploadError) {
+        console.error('License upload error:', uploadError)
+        throw new Error(uploadError.message || 'Failed to upload license photo')
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('licenses')
+        .getPublicUrl(filePath)
+
+      if (!urlData?.publicUrl) {
+        throw new Error('Failed to get license photo URL')
+      }
+
+      // Update form data with license URL
+      setFormData((prev) => ({ ...prev, licenseImageUrl: urlData.publicUrl }))
+      setLicenseUploadSuccess(true)
+      setLicenseUploadError(null)
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setLicenseUploadSuccess(false)
+      }, 3000)
+
+      // Clear error if it exists
+      if (errors.licenseImageUrl) {
+        setErrors((prev) => ({ ...prev, licenseImageUrl: undefined }))
+      }
+    } catch (error) {
+      console.error('License upload error:', error)
+      setLicenseUploadError(error instanceof Error ? error.message : 'Error al subir la foto de licencia')
+      setLicenseUploadSuccess(false)
+    } finally {
+      setLicenseUploading(false)
+    }
+  }
+
+  // Handle license file input change
+  const handleLicenseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    if (file) {
+      handleLicenseUpload(file)
+    }
+  }
+
+  // Handle license photo selection
+  const handleLicenseSelect = () => {
+    licenseInputRef.current?.click()
+  }
+
+  // Remove license photo
+  const handleRemoveLicense = () => {
+    setFormData((prev) => ({ ...prev, licenseImageUrl: undefined }))
+    setLicensePreview(null)
+    setLicenseUploadSuccess(false)
+    setLicenseUploadError(null)
+    if (licenseInputRef.current) {
+      licenseInputRef.current.value = ''
+    }
   }
 
   return (
@@ -308,19 +411,91 @@ export default function GuestDetailsPage() {
                 )}
               </div>
 
-              {/* License Photo Capture */}
+              {/* License Photo Upload - MANDATORY */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  Foto de Licencia de Conducir
+                  Foto de Licencia de Conducir <span className="text-red-500">*</span>
                 </Label>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Captura una foto de tu licencia de conducir (opcional pero recomendado)
+                <p className="text-sm text-slate-700 mb-2">
+                  Captura una foto clara de tu licencia de conducir. Este paso es obligatorio.
                 </p>
-                <LicenseCapture
-                  onCapture={handleLicenseCapture}
-                  currentImageUrl={formData.licenseImageUrl}
-                />
+                
+                <div className="relative">
+                  {formData.licenseImageUrl || licensePreview ? (
+                    <div className="relative group">
+                      <img
+                        src={licensePreview || formData.licenseImageUrl || ''}
+                        alt="Licencia de conducir"
+                        className="w-full h-48 object-contain rounded-lg border-2 border-green-500 bg-white"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleRemoveLicense}
+                          className="h-8"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Eliminar
+                        </Button>
+                      </div>
+                      <div className="absolute top-2 right-2">
+                        <CheckCircle2 className="h-6 w-6 text-green-500 bg-white rounded-full" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 h-48 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors">
+                      {licenseUploading ? (
+                        <>
+                          <Loader2 className="h-10 w-10 text-blue-500 mb-3 animate-spin" />
+                          <p className="text-sm text-slate-600">Subiendo foto de licencia… por favor espera.</p>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="h-10 w-10 text-slate-400 mb-3" />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleLicenseSelect}
+                            className="text-sm"
+                          >
+                            Subir Foto de Licencia
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Upload success message */}
+                  {licenseUploadSuccess && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-center">
+                      <p className="text-xs text-green-700">Licencia cargada correctamente.</p>
+                    </div>
+                  )}
+
+                  {/* Upload error message */}
+                  {licenseUploadError && (
+                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-center">
+                      <p className="text-xs text-amber-700">{licenseUploadError}</p>
+                    </div>
+                  )}
+
+                  {/* Validation error */}
+                  {errors.licenseImageUrl && (
+                    <p className="text-sm text-red-500 mt-1">{errors.licenseImageUrl}</p>
+                  )}
+
+                  <input
+                    ref={licenseInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLicenseFileChange}
+                    className="hidden"
+                  />
+                </div>
               </div>
 
               {/* Submit Button */}
@@ -329,7 +504,7 @@ export default function GuestDetailsPage() {
                   type="submit"
                   className="w-full"
                   size="lg"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !formData.licenseImageUrl || licenseUploading}
                 >
                   {isSubmitting ? (
                     "Procesando..."
@@ -340,6 +515,11 @@ export default function GuestDetailsPage() {
                     </>
                   )}
                 </Button>
+                {!formData.licenseImageUrl && (
+                  <p className="text-xs text-center text-amber-600 mt-2">
+                    Debes subir una foto de tu licencia de conducir para continuar.
+                  </p>
+                )}
               </div>
             </form>
           </CardContent>

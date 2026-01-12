@@ -83,6 +83,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate license image URL (mandatory)
+    if (!guestDetails.licenseImageUrl) {
+      return NextResponse.json<CheckoutResponse>(
+        {
+          success: false,
+          error: 'La foto de licencia de conducir es obligatoria',
+        },
+        { status: 400 }
+      )
+    }
+
     const supabaseAdmin = createAdminClient()
 
     // Step 1: Find car by plate

@@ -51,7 +51,7 @@ export default function RentPage({ params }: RentPageProps) {
   const days = calculateDays()
   const totalPrice = days * DAILY_RATE
 
-  // Handle reservation - redirect to guest details first
+  // Handle reservation - redirect to rental process page first
   const handleReserve = () => {
     if (!date?.from || !date?.to) return
 
@@ -59,7 +59,7 @@ export default function RentPage({ params }: RentPageProps) {
     const endDate = format(date.to, "yyyy-MM-dd")
     
     router.push(
-      `/guest-details?plate=${encodeURIComponent(plate)}&days=${days}&total=${totalPrice.toFixed(2)}&start=${startDate}&end=${endDate}`
+      `/rental-process?plate=${encodeURIComponent(plate)}&days=${days}&total=${totalPrice.toFixed(2)}&start=${startDate}&end=${endDate}`
     )
   }
 

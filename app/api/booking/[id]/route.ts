@@ -13,6 +13,8 @@ export async function GET(
 ) {
   try {
     const bookingId = params.id
+    const { searchParams } = new URL(request.url)
+    const token = searchParams.get('token')
 
     if (!bookingId) {
       return NextResponse.json(
@@ -54,7 +56,33 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(booking, { status: 200 })
+    // If token is provided, validate it
+    if (token) {
+      const metadata = (booking.metadata as Record<string, any>) || {}
+      const storedToken = metadata.access_token
+
+      if (!storedToken || storedToken !== token) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid access token',
+            valid: false,
+          },
+          { status: 403 }
+        )
+      }
+
+      // Token is valid
+      return NextResponse.json({
+        ...booking,
+        tokenValid: true,
+      }, { status: 200 })
+    }
+
+    // No token provided - return booking but mark token as not validated
+    return NextResponse.json({
+      ...booking,
+      tokenValid: false,
+    }, { status: 200 })
   } catch (error) {
     console.error('Unexpected error in booking API:', error)
     return NextResponse.json(

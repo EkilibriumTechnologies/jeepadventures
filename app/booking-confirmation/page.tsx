@@ -191,7 +191,7 @@ export default function BookingConfirmationPage() {
           <Card className="border-blue-200 bg-blue-50/50">
             <CardContent className="pt-6">
               <Button
-                onClick={() => router.push("/active-rental")}
+                onClick={() => router.push(`/active-rental?bookingId=${bookingId}`)}
                 className="w-full"
                 size="lg"
               >
@@ -215,7 +215,7 @@ export default function BookingConfirmationPage() {
             Volver al Inicio
           </Button>
           <Button
-            onClick={() => router.push("/active-rental")}
+            onClick={() => router.push(`/active-rental?bookingId=${bookingId}`)}
             className="flex-1"
           >
             Abrir Vehículo
